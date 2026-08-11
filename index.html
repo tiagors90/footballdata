@@ -114,6 +114,34 @@
     background: var(--line);
   }
 
+  /* ---- Stat view toggle (segmented control) ---- */
+  .view-toggle {
+    display: flex;
+    background: var(--line);
+    border-radius: 8px;
+    padding: 3px;
+    margin-bottom: 10px;
+    gap: 3px;
+  }
+  .view-toggle button {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 7px 0;
+    font-family: 'Oswald', sans-serif;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .view-toggle button.active {
+    background: var(--card);
+    color: var(--ink);
+  }
+
   /* ---- Team table ---- */
   .team-table {
     background: var(--card);
@@ -194,6 +222,22 @@
     flex-shrink: 0;
     align-self: flex-start;
   }
+  .match-extra {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--line);
+    display: flex;
+    gap: 14px;
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .match-extra .extra-label {
+    font-family: 'Oswald', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-size: 9.5px;
+    margin-right: 3px;
+  }
 
   .empty-state {
     text-align: center;
@@ -221,6 +265,11 @@
 <main>
   <section class="panel">
     <div class="panel-title">Table</div>
+    <div class="view-toggle" id="statToggle">
+      <button data-view="goals" class="active">Goals</button>
+      <button data-view="corners">Corners</button>
+      <button data-view="cards">Cards</button>
+    </div>
     <div class="team-table" id="teamTable">
       <div class="load-state">Loading…</div>
     </div>
@@ -250,11 +299,21 @@ async function sb(path) {
 }
 
 let currentLeagueId = null;
+let currentStatView = "goals"; // 'goals' | 'corners' | 'cards'
 let leagues = [];
+let currentTeams = [];
 
 function fmt(n) {
   return (n === null || n === undefined) ? "–" : n;
 }
+
+document.getElementById("statToggle").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-view]");
+  if (!btn) return;
+  currentStatView = btn.dataset.view;
+  document.querySelectorAll("#statToggle button").forEach(b => b.classList.toggle("active", b === btn));
+  renderTeamTable(currentTeams);
+});
 
 function renderTabs() {
   const el = document.getElementById("leagueTabs");
@@ -284,35 +343,17 @@ async function loadLeagueData() {
   teamTable.innerHTML = '<div class="load-state">Loading…</div>';
   matchList.innerHTML = '<div class="load-state">Loading…</div>';
 
-  const teams = await sb(
-    "team_summary?select=team_name,played,goals_for,goals_against,goal_diff" +
+  currentTeams = await sb(
+    "team_summary?select=team_name,played,goals_for,goals_against,goal_diff," +
+    "corners_for,corners_against,avg_corners_for,avg_corners_against," +
+    "yellow_cards,red_cards,avg_cards_per_match" +
     "&league_id=eq." + currentLeagueId + "&order=goal_diff.desc,goals_for.desc"
   );
-
-  if (teams.length === 0) {
-    teamTable.innerHTML = '<div class="empty-state">No teams found for this league.</div>';
-  } else {
-    let html = `<div class="team-row head">
-      <div>#</div><div>Team</div><div style="text-align:center">P</div>
-      <div style="text-align:center">GF</div><div style="text-align:center">GA</div><div style="text-align:center">GD</div>
-    </div>`;
-    teams.forEach((t, i) => {
-      const gdClass = t.goal_diff > 0 ? "gd-pos" : (t.goal_diff < 0 ? "gd-neg" : "");
-      const gdText = t.goal_diff > 0 ? "+" + t.goal_diff : t.goal_diff;
-      html += `<div class="team-row">
-        <div class="rank">${i + 1}</div>
-        <div class="team-name">${t.team_name}</div>
-        <div class="stat-num">${fmt(t.played)}</div>
-        <div class="stat-num">${fmt(t.goals_for)}</div>
-        <div class="stat-num">${fmt(t.goals_against)}</div>
-        <div class="stat-num ${gdClass}">${fmt(gdText)}</div>
-      </div>`;
-    });
-    teamTable.innerHTML = html;
-  }
+  renderTeamTable(currentTeams);
 
   const matches = await sb(
-    "matches?select=match_date,home_goals,away_goals," +
+    "matches?select=match_date,home_goals,away_goals,home_corners,away_corners," +
+    "home_yellow,home_red,away_yellow,away_red," +
     "league:leagues(name,color)," +
     "home_team:teams!matches_home_team_id_fkey(name)," +
     "away_team:teams!matches_away_team_id_fkey(name)" +
@@ -326,6 +367,10 @@ async function loadLeagueData() {
     matchList.innerHTML = matches.map(m => {
       const d = new Date(m.match_date + "T00:00:00");
       const dateStr = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+      const cornersLine = (m.home_corners !== null && m.away_corners !== null)
+        ? `<span><span class="extra-label">Corners</span>${m.home_corners}–${m.away_corners}</span>`
+        : "";
+      const cardsLine = `<span><span class="extra-label">Cards</span>${m.home_yellow}Y ${m.home_red}R – ${m.away_yellow}Y ${m.away_red}R</span>`;
       return `<div class="match-card">
         <div class="match-date">${dateStr}</div>
         <div class="match-teams">
@@ -337,10 +382,49 @@ async function loadLeagueData() {
             <span class="match-team-name">${m.away_team.name}</span>
             <span class="score-box">${m.away_goals}</span>
           </div>
+          <div class="match-extra">${cornersLine}${cardsLine}</div>
         </div>
       </div>`;
     }).join("");
   }
+}
+
+function renderTeamTable(teams) {
+  const teamTable = document.getElementById("teamTable");
+  if (teams.length === 0) {
+    teamTable.innerHTML = '<div class="empty-state">No teams found for this league.</div>';
+    return;
+  }
+
+  let headCols, rowFn;
+
+  if (currentStatView === "goals") {
+    headCols = ["P", "GF", "GA", "GD"];
+    rowFn = t => {
+      const gdClass = t.goal_diff > 0 ? "gd-pos" : (t.goal_diff < 0 ? "gd-neg" : "");
+      const gdText = t.goal_diff > 0 ? "+" + t.goal_diff : t.goal_diff;
+      return [fmt(t.played), fmt(t.goals_for), fmt(t.goals_against), `<span class="${gdClass}">${fmt(gdText)}</span>`];
+    };
+  } else if (currentStatView === "corners") {
+    headCols = ["P", "CF", "CA", "Avg"];
+    rowFn = t => [fmt(t.played), fmt(t.corners_for), fmt(t.corners_against), fmt(t.avg_corners_for)];
+  } else {
+    headCols = ["P", "Y", "R", "Avg"];
+    rowFn = t => [fmt(t.played), fmt(t.yellow_cards), fmt(t.red_cards), fmt(t.avg_cards_per_match)];
+  }
+
+  let html = `<div class="team-row head">
+    <div>#</div><div>Team</div>${headCols.map(c => `<div style="text-align:center">${c}</div>`).join("")}
+  </div>`;
+  teams.forEach((t, i) => {
+    const cols = rowFn(t);
+    html += `<div class="team-row">
+      <div class="rank">${i + 1}</div>
+      <div class="team-name">${t.team_name}</div>
+      ${cols.map(c => `<div class="stat-num">${c}</div>`).join("")}
+    </div>`;
+  });
+  teamTable.innerHTML = html;
 }
 
 async function init() {
