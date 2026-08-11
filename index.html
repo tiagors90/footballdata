@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Football Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --turf: #1B4332;
+    --turf-light: #2D6A4F;
+    --chalk: #F7F5F0;
+    --card: #FFFFFF;
+    --ink: #1B1B1B;
+    --ink-soft: #6B6A63;
+    --line: #E1DDD0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--chalk);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    padding-bottom: 40px;
+  }
+  .scoreface { font-family: 'Oswald', sans-serif; font-variant-numeric: tabular-nums; }
+
+  /* ---- Hero / scoreboard strip ---- */
+  header.hero {
+    background: var(--turf);
+    background-image: linear-gradient(180deg, var(--turf) 0%, var(--turf-light) 100%);
+    color: var(--chalk);
+    padding: 28px 20px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  header.hero::after {
+    content: "";
+    position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 48px);
+    pointer-events: none;
+  }
+  h1.title {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 26px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    position: relative;
+  }
+  .subtitle { font-size: 13px; color: rgba(247,245,240,0.75); margin-top: 4px; position: relative; }
+  .stat-strip {
+    display: flex;
+    gap: 22px;
+    margin-top: 18px;
+    position: relative;
+  }
+  .stat-block .num {
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .stat-block .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: rgba(247,245,240,0.7);
+    margin-top: 3px;
+  }
+
+  /* ---- League pills ---- */
+  .league-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 14px 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .league-tabs::-webkit-scrollbar { display: none; }
+  .pill {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 0.2px;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .pill.active { border-color: var(--ink); }
+
+  main { padding: 0 16px; }
+  section.panel { margin-bottom: 26px; }
+  .panel-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--ink-soft);
+    margin: 0 0 10px 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  /* ---- Team table ---- */
+  .team-table {
+    background: var(--card);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .team-row {
+    display: grid;
+    grid-template-columns: 24px 1fr 28px 28px 28px 36px;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .team-row:last-child { border-bottom: none; }
+  .team-row.head {
+    font-family: 'Oswald', sans-serif;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    letter-spacing: 0.4px;
+    padding-top: 8px; padding-bottom: 8px;
+  }
+  .rank { color: var(--ink-soft); font-family: 'Oswald', sans-serif; font-weight: 500; }
+  .team-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stat-num { text-align: center; font-family: 'Oswald', sans-serif; }
+  .gd-pos { color: #1D9E75; }
+  .gd-neg { color: #D85A30; }
+
+  /* ---- Match scoreboard rows ---- */
+  .match-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .match-date {
+    font-size: 10px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    width: 46px;
+    flex-shrink: 0;
+    line-height: 1.3;
+  }
+  .match-teams { flex: 1; min-width: 0; }
+  .match-team-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13.5px;
+    padding: 2px 0;
+  }
+  .match-team-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .score-box {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    background: var(--chalk);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 1px 7px;
+    min-width: 22px;
+    text-align: center;
+  }
+  .league-tag {
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-family: 'Oswald', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+    align-self: flex-start;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 13px;
+    padding: 30px 10px;
+  }
+  .load-state { text-align: center; color: var(--ink-soft); font-size: 13px; padding: 20px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1 class="title">Football Tracker</h1>
+  <div class="subtitle">Seven leagues, one scoreboard</div>
+  <div class="stat-strip">
+    <div class="stat-block"><div class="num scoreface" id="statMatches">–</div><div class="label">Matches</div></div>
+    <div class="stat-block"><div class="num scoreface" id="statGoals">–</div><div class="label">Goals</div></div>
+    <div class="stat-block"><div class="num scoreface" id="statAvg">–</div><div class="label">Goals / match</div></div>
+  </div>
+</header>
+
+<div class="league-tabs" id="leagueTabs"></div>
+
+<main>
+  <section class="panel">
+    <div class="panel-title">Table</div>
+    <div class="team-table" id="teamTable">
+      <div class="load-state">Loading…</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">Recent results</div>
+    <div id="matchList">
+      <div class="load-state">Loading…</div>
+    </div>
+  </section>
+</main>
+
+<script>
+const SUPABASE_URL = "https://myjwctfetxuyqndbnodg.supabase.co";
+const SUPABASE_KEY = "sb_publishable_w7rOiDHLvmeWG1kK2tILmA_XVAz7Ucc";
+
+const headers = {
+  apikey: SUPABASE_KEY,
+  Authorization: "Bearer " + SUPABASE_KEY
+};
+
+async function sb(path) {
+  const res = await fetch(SUPABASE_URL + "/rest/v1/" + path, { headers });
+  if (!res.ok) throw new Error("Supabase request failed: " + path + " (" + res.status + ")");
+  return res.json();
+}
+
+let currentLeagueId = null;
+let leagues = [];
+
+function fmt(n) {
+  return (n === null || n === undefined) ? "–" : n;
+}
+
+function renderTabs() {
+  const el = document.getElementById("leagueTabs");
+  el.innerHTML = "";
+  leagues.forEach(lg => {
+    const btn = document.createElement("div");
+    btn.className = "pill" + (lg.id === currentLeagueId ? " active" : "");
+    btn.style.background = lg.color;
+    btn.textContent = lg.name;
+    btn.onclick = () => { currentLeagueId = lg.id; renderTabs(); loadLeagueData(); };
+    el.appendChild(btn);
+  });
+}
+
+async function loadGlobalStats() {
+  const summary = await sb("league_summary?select=matches_played,total_goals");
+  const matches = summary.reduce((a, r) => a + (r.matches_played || 0), 0);
+  const goals = summary.reduce((a, r) => a + (r.total_goals || 0), 0);
+  document.getElementById("statMatches").textContent = matches;
+  document.getElementById("statGoals").textContent = goals;
+  document.getElementById("statAvg").textContent = matches > 0 ? (goals / matches).toFixed(2) : "0.00";
+}
+
+async function loadLeagueData() {
+  const teamTable = document.getElementById("teamTable");
+  const matchList = document.getElementById("matchList");
+  teamTable.innerHTML = '<div class="load-state">Loading…</div>';
+  matchList.innerHTML = '<div class="load-state">Loading…</div>';
+
+  const teams = await sb(
+    "team_summary?select=team_name,played,goals_for,goals_against,goal_diff" +
+    "&league_id=eq." + currentLeagueId + "&order=goal_diff.desc,goals_for.desc"
+  );
+
+  if (teams.length === 0) {
+    teamTable.innerHTML = '<div class="empty-state">No teams found for this league.</div>';
+  } else {
+    let html = `<div class="team-row head">
+      <div>#</div><div>Team</div><div style="text-align:center">P</div>
+      <div style="text-align:center">GF</div><div style="text-align:center">GA</div><div style="text-align:center">GD</div>
+    </div>`;
+    teams.forEach((t, i) => {
+      const gdClass = t.goal_diff > 0 ? "gd-pos" : (t.goal_diff < 0 ? "gd-neg" : "");
+      const gdText = t.goal_diff > 0 ? "+" + t.goal_diff : t.goal_diff;
+      html += `<div class="team-row">
+        <div class="rank">${i + 1}</div>
+        <div class="team-name">${t.team_name}</div>
+        <div class="stat-num">${fmt(t.played)}</div>
+        <div class="stat-num">${fmt(t.goals_for)}</div>
+        <div class="stat-num">${fmt(t.goals_against)}</div>
+        <div class="stat-num ${gdClass}">${fmt(gdText)}</div>
+      </div>`;
+    });
+    teamTable.innerHTML = html;
+  }
+
+  const matches = await sb(
+    "matches?select=match_date,home_goals,away_goals," +
+    "league:leagues(name,color)," +
+    "home_team:teams!matches_home_team_id_fkey(name)," +
+    "away_team:teams!matches_away_team_id_fkey(name)" +
+    "&league_id=eq." + currentLeagueId +
+    "&order=match_date.desc&limit=15"
+  );
+
+  if (matches.length === 0) {
+    matchList.innerHTML = '<div class="empty-state">No matches logged for this league yet.</div>';
+  } else {
+    matchList.innerHTML = matches.map(m => {
+      const d = new Date(m.match_date + "T00:00:00");
+      const dateStr = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+      return `<div class="match-card">
+        <div class="match-date">${dateStr}</div>
+        <div class="match-teams">
+          <div class="match-team-line">
+            <span class="match-team-name">${m.home_team.name}</span>
+            <span class="score-box">${m.home_goals}</span>
+          </div>
+          <div class="match-team-line">
+            <span class="match-team-name">${m.away_team.name}</span>
+            <span class="score-box">${m.away_goals}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+}
+
+async function init() {
+  try {
+    leagues = await sb("leagues?select=id,name,color&order=id.asc");
+    if (leagues.length === 0) {
+      document.getElementById("leagueTabs").innerHTML = '<div class="empty-state">No leagues found. Did you run seed_leagues_teams.sql?</div>';
+      return;
+    }
+    currentLeagueId = leagues[0].id;
+    renderTabs();
+    await loadGlobalStats();
+    await loadLeagueData();
+  } catch (err) {
+    document.body.innerHTML = '<div class="empty-state" style="padding-top:60px">Could not reach the database.<br>' + err.message + '</div>';
+    console.error(err);
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>
