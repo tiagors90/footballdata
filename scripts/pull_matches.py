@@ -76,6 +76,15 @@ def main():
     teams = sb_get("teams?select=id,name")
     team_id_by_name = {t["name"]: t["id"] for t in teams}
 
+    # Layer in known aliases (football-data.org's official names -> your team_id),
+    # so e.g. "Sport Lisboa e Benfica" resolves to the same team as "Benfica".
+    try:
+        aliases = sb_get("team_aliases?select=alias,team_id")
+        for a in aliases:
+            team_id_by_name[a["alias"]] = a["team_id"]
+    except requests.HTTPError:
+        pass  # table doesn't exist yet -- fine, just no aliases applied this run
+
     total_added = 0
     total_skipped_unmatched = 0
 
