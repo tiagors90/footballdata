@@ -1,0 +1,29 @@
+name: Pull new matches
+
+on:
+  schedule:
+    # 06:00 UTC daily. Adjust the cron if you want a different time.
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}  # adds a manual "Run workflow" button in the Actions tab
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run pull script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
+        run: python scripts/pull_matches.py
