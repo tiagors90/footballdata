@@ -43,6 +43,9 @@ FD_HEADERS = {"X-Auth-Token": FOOTBALL_DATA_API_KEY}
 FD_BASE = "https://api.football-data.org/v4"
 
 DEFAULT_LOOKBACK_DAYS = 60  # first-ever run for a league
+SAFE_LAG_DAYS = 3  # never mark today/recent days as "fully checked" -- matches
+                    # played later the same day (after this script's run time)
+                    # would otherwise get permanently skipped.
 
 
 def sb_get(path):
@@ -148,7 +151,12 @@ def main():
         total_added += len(rows)
         print(f"  {len(rows)} match(es) upserted.")
 
-        sb_patch(f"leagues?id=eq.{league['id']}", {"last_pulled": date_to.isoformat()})
+        # Only mark days as "fully checked" up to SAFE_LAG_DAYS ago -- never
+        # the very recent days, since a match scheduled later today (after
+        # this run) would otherwise get silently skipped forever.
+        safe_last_pulled = min(date_to, date.today() - timedelta(days=SAFE_LAG_DAYS))
+        if last_pulled is None or safe_last_pulled > date.fromisoformat(last_pulled):
+            sb_patch(f"leagues?id=eq.{league['id']}", {"last_pulled": safe_last_pulled.isoformat()})
 
     print(f"\nDone. {total_added} match(es) upserted total, {total_skipped_unmatched} skipped for unmatched team names.")
     if total_skipped_unmatched > 0:
