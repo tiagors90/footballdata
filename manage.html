@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Matches</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --turf: #1B4332; --turf-light: #2D6A4F; --chalk: #F7F5F0;
+    --card: #FFFFFF; --ink: #1B1B1B; --ink-soft: #6B6A63; --line: #E1DDD0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--chalk); color: var(--ink); font-family: 'Inter', sans-serif; padding-bottom: 60px; }
+  header.hero {
+    background: linear-gradient(180deg, var(--turf) 0%, var(--turf-light) 100%);
+    color: var(--chalk); padding: 22px 20px;
+  }
+  h1.title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 22px; text-transform: uppercase; }
+  main { padding: 16px; max-width: 480px; margin: 0 auto; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  label { display: block; font-family: 'Oswald', sans-serif; font-size: 11px; text-transform: uppercase;
+          letter-spacing: 0.4px; color: var(--ink-soft); margin: 12px 0 5px; }
+  label:first-child { margin-top: 0; }
+  input, select {
+    width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 8px;
+    font-size: 15px; font-family: 'Inter', sans-serif; background: var(--chalk); color: var(--ink);
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  button.primary {
+    width: 100%; margin-top: 16px; padding: 12px; border: none; border-radius: 8px;
+    background: var(--turf); color: var(--chalk); font-family: 'Oswald', sans-serif;
+    font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; cursor: pointer;
+  }
+  button.primary:disabled { opacity: 0.5; }
+  button.secondary {
+    width: 100%; margin-top: 8px; padding: 10px; border: 1.5px solid var(--line); border-radius: 8px;
+    background: transparent; color: var(--ink-soft); font-family: 'Oswald', sans-serif;
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; cursor: pointer;
+  }
+  .msg { font-size: 13px; margin-top: 10px; padding: 8px 10px; border-radius: 6px; }
+  .msg.ok { background: #E2F3E9; color: #1D6E43; }
+  .msg.err { background: #FBE4E1; color: #A3341D; }
+
+  .section-title { font-family: 'Oswald', sans-serif; font-size: 13px; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--ink-soft); margin: 22px 0 10px 2px; }
+
+  .match-pick {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 6px; font-size: 13px; cursor: pointer;
+  }
+  .match-pick:active { background: var(--chalk); }
+  .match-pick .d { color: var(--ink-soft); font-size: 11px; }
+
+  #logoutBar { display: flex; justify-content: space-between; align-items: center; }
+  #logoutBar button { background: none; border: none; color: var(--chalk); font-size: 12px;
+    text-decoration: underline; cursor: pointer; }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div id="logoutBar">
+    <h1 class="title">Manage Matches</h1>
+    <button id="logoutBtn" class="hidden">Log out</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- LOGIN -->
+  <div id="loginView" class="card">
+    <label>Email</label>
+    <input type="email" id="loginEmail" autocomplete="username">
+    <label>Password</label>
+    <input type="password" id="loginPassword" autocomplete="current-password">
+    <button class="primary" id="loginBtn">Log in</button>
+    <div id="loginMsg"></div>
+  </div>
+
+  <!-- MAIN APP (hidden until logged in) -->
+  <div id="appView" class="hidden">
+
+    <div class="section-title">Add new match</div>
+    <div class="card">
+      <label>League</label>
+      <select id="addLeague"></select>
+      <label>Date</label>
+      <input type="date" id="addDate">
+      <label>Home team</label>
+      <select id="addHomeTeam"></select>
+      <label>Away team</label>
+      <select id="addAwayTeam"></select>
+      <div class="row2">
+        <div><label>Home goals</label><input type="number" id="addHG" min="0"></div>
+        <div><label>Away goals</label><input type="number" id="addAG" min="0"></div>
+      </div>
+      <div class="row2">
+        <div><label>Home corners</label><input type="number" id="addHC" min="0"></div>
+        <div><label>Away corners</label><input type="number" id="addAC" min="0"></div>
+      </div>
+      <div class="row2">
+        <div><label>Home yellow</label><input type="number" id="addHY" min="0" value="0"></div>
+        <div><label>Home red</label><input type="number" id="addHR" min="0" value="0"></div>
+      </div>
+      <div class="row2">
+        <div><label>Away yellow</label><input type="number" id="addAY" min="0" value="0"></div>
+        <div><label>Away red</label><input type="number" id="addAR" min="0" value="0"></div>
+      </div>
+      <button class="primary" id="addSaveBtn">Save new match</button>
+      <div id="addMsg"></div>
+    </div>
+
+    <div class="section-title">Edit existing match</div>
+    <div class="card">
+      <label>League</label>
+      <select id="editLeague"></select>
+      <div id="matchListWrap">
+        <div id="matchList"></div>
+      </div>
+    </div>
+
+    <div class="card hidden" id="editFormCard">
+      <div id="editHeader" style="font-family:'Oswald',sans-serif; font-size:14px; margin-bottom:8px;"></div>
+      <div class="row2">
+        <div><label>Home goals</label><input type="number" id="editHG" min="0"></div>
+        <div><label>Away goals</label><input type="number" id="editAG" min="0"></div>
+      </div>
+      <div class="row2">
+        <div><label>Home corners</label><input type="number" id="editHC" min="0"></div>
+        <div><label>Away corners</label><input type="number" id="editAC" min="0"></div>
+      </div>
+      <div class="row2">
+        <div><label>Home yellow</label><input type="number" id="editHY" min="0"></div>
+        <div><label>Home red</label><input type="number" id="editHR" min="0"></div>
+      </div>
+      <div class="row2">
+        <div><label>Away yellow</label><input type="number" id="editAY" min="0"></div>
+        <div><label>Away red</label><input type="number" id="editAR" min="0"></div>
+      </div>
+      <button class="primary" id="editSaveBtn">Save changes</button>
+      <button class="secondary" id="editCancelBtn">Cancel</button>
+      <div id="editMsg"></div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+const SUPABASE_URL = "https://myjwctfetxuyqndbnodg.supabase.co";
+const SUPABASE_KEY = "sb_publishable_w7rOiDHLvmeWG1kK2tILmA_XVAz7Ucc";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let leagues = [];
+let teamsByLeague = {}; // league_id -> [{id,name}]
+let editingMatchId = null;
+
+function showMsg(el, text, ok) {
+  el.innerHTML = `<div class="msg ${ok ? 'ok' : 'err'}">${text}</div>`;
+  setTimeout(() => { el.innerHTML = ""; }, 4000);
+}
+
+// ---------- AUTH ----------
+async function checkSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    document.getElementById("loginView").classList.add("hidden");
+    document.getElementById("appView").classList.remove("hidden");
+    document.getElementById("logoutBtn").classList.remove("hidden");
+    await loadLeaguesAndTeams();
+  } else {
+    document.getElementById("loginView").classList.remove("hidden");
+    document.getElementById("appView").classList.add("hidden");
+    document.getElementById("logoutBtn").classList.add("hidden");
+  }
+}
+
+document.getElementById("loginBtn").onclick = async () => {
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  const msgEl = document.getElementById("loginMsg");
+  if (error) { showMsg(msgEl, error.message, false); return; }
+  await checkSession();
+};
+
+document.getElementById("logoutBtn").onclick = async () => {
+  await sb.auth.signOut();
+  await checkSession();
+};
+
+// ---------- LOAD LEAGUES / TEAMS ----------
+async function loadLeaguesAndTeams() {
+  const { data: lgs } = await sb.from("leagues").select("id,name").order("id");
+  leagues = lgs || [];
+  const { data: tms } = await sb.from("teams").select("id,name,league_id").order("name");
+  teamsByLeague = {};
+  (tms || []).forEach(t => {
+    if (!teamsByLeague[t.league_id]) teamsByLeague[t.league_id] = [];
+    teamsByLeague[t.league_id].push(t);
+  });
+
+  const leagueOptions = leagues.map(l => `<option value="${l.id}">${l.name}</option>`).join("");
+  document.getElementById("addLeague").innerHTML = leagueOptions;
+  document.getElementById("editLeague").innerHTML = leagueOptions;
+
+  populateTeamDropdowns(leagues[0]?.id);
+  document.getElementById("addDate").value = new Date().toISOString().slice(0, 10);
+
+  document.getElementById("addLeague").onchange = (e) => populateTeamDropdowns(e.target.value);
+  document.getElementById("editLeague").onchange = (e) => loadMatchList(e.target.value);
+
+  loadMatchList(leagues[0]?.id);
+}
+
+function populateTeamDropdowns(leagueId) {
+  const teams = teamsByLeague[leagueId] || [];
+  const opts = teams.map(t => `<option value="${t.id}">${t.name}</option>`).join("");
+  document.getElementById("addHomeTeam").innerHTML = opts;
+  document.getElementById("addAwayTeam").innerHTML = opts;
+}
+
+// ---------- ADD NEW MATCH ----------
+document.getElementById("addSaveBtn").onclick = async () => {
+  const btn = document.getElementById("addSaveBtn");
+  btn.disabled = true;
+  const msgEl = document.getElementById("addMsg");
+
+  const row = {
+    match_date: document.getElementById("addDate").value,
+    league_id: Number(document.getElementById("addLeague").value),
+    home_team_id: Number(document.getElementById("addHomeTeam").value),
+    away_team_id: Number(document.getElementById("addAwayTeam").value),
+    home_goals: Number(document.getElementById("addHG").value || 0),
+    away_goals: Number(document.getElementById("addAG").value || 0),
+    home_corners: document.getElementById("addHC").value === "" ? null : Number(document.getElementById("addHC").value),
+    away_corners: document.getElementById("addAC").value === "" ? null : Number(document.getElementById("addAC").value),
+    home_yellow: Number(document.getElementById("addHY").value || 0),
+    home_red: Number(document.getElementById("addHR").value || 0),
+    away_yellow: Number(document.getElementById("addAY").value || 0),
+    away_red: Number(document.getElementById("addAR").value || 0),
+  };
+
+  if (row.home_team_id === row.away_team_id) {
+    showMsg(msgEl, "Home and away team can't be the same.", false);
+    btn.disabled = false;
+    return;
+  }
+
+  const { error } = await sb.from("matches").insert(row);
+  btn.disabled = false;
+  if (error) { showMsg(msgEl, error.message, false); return; }
+  showMsg(msgEl, "Match saved.", true);
+  loadMatchList(document.getElementById("editLeague").value);
+};
+
+// ---------- EDIT EXISTING MATCH ----------
+async function loadMatchList(leagueId) {
+  if (!leagueId) return;
+  const { data, error } = await sb
+    .from("matches")
+    .select("id,match_date,home_goals,away_goals,home_team:teams!matches_home_team_id_fkey(name),away_team:teams!matches_away_team_id_fkey(name)")
+    .eq("league_id", leagueId)
+    .order("match_date", { ascending: false })
+    .limit(20);
+
+  const wrap = document.getElementById("matchList");
+  if (error) { wrap.innerHTML = `<div class="msg err">${error.message}</div>`; return; }
+  if (!data || data.length === 0) { wrap.innerHTML = `<div class="msg err">No matches yet.</div>`; return; }
+
+  wrap.innerHTML = data.map(m => `
+    <div class="match-pick" data-id="${m.id}">
+      <div class="d">${m.match_date}</div>
+      ${m.home_team.name} ${m.home_goals}–${m.away_goals} ${m.away_team.name}
+    </div>
+  `).join("");
+
+  wrap.querySelectorAll(".match-pick").forEach(el => {
+    el.onclick = () => openEditForm(Number(el.dataset.id));
+  });
+}
+
+async function openEditForm(matchId) {
+  const { data: m, error } = await sb
+    .from("matches")
+    .select("id,match_date,home_goals,away_goals,home_corners,away_corners,home_yellow,home_red,away_yellow,away_red,home_team:teams!matches_home_team_id_fkey(name),away_team:teams!matches_away_team_id_fkey(name)")
+    .eq("id", matchId)
+    .single();
+
+  if (error) { alert(error.message); return; }
+
+  editingMatchId = matchId;
+  document.getElementById("editHeader").textContent = `${m.match_date} — ${m.home_team.name} vs ${m.away_team.name}`;
+  document.getElementById("editHG").value = m.home_goals;
+  document.getElementById("editAG").value = m.away_goals;
+  document.getElementById("editHC").value = m.home_corners ?? "";
+  document.getElementById("editAC").value = m.away_corners ?? "";
+  document.getElementById("editHY").value = m.home_yellow;
+  document.getElementById("editHR").value = m.home_red;
+  document.getElementById("editAY").value = m.away_yellow;
+  document.getElementById("editAR").value = m.away_red;
+
+  document.getElementById("editFormCard").classList.remove("hidden");
+  document.getElementById("editFormCard").scrollIntoView({ behavior: "smooth" });
+}
+
+document.getElementById("editCancelBtn").onclick = () => {
+  editingMatchId = null;
+  document.getElementById("editFormCard").classList.add("hidden");
+};
+
+document.getElementById("editSaveBtn").onclick = async () => {
+  if (!editingMatchId) return;
+  const btn = document.getElementById("editSaveBtn");
+  btn.disabled = true;
+  const msgEl = document.getElementById("editMsg");
+
+  const updates = {
+    home_goals: Number(document.getElementById("editHG").value || 0),
+    away_goals: Number(document.getElementById("editAG").value || 0),
+    home_corners: document.getElementById("editHC").value === "" ? null : Number(document.getElementById("editHC").value),
+    away_corners: document.getElementById("editAC").value === "" ? null : Number(document.getElementById("editAC").value),
+    home_yellow: Number(document.getElementById("editHY").value || 0),
+    home_red: Number(document.getElementById("editHR").value || 0),
+    away_yellow: Number(document.getElementById("editAY").value || 0),
+    away_red: Number(document.getElementById("editAR").value || 0),
+  };
+
+  const { error } = await sb.from("matches").update(updates).eq("id", editingMatchId);
+  btn.disabled = false;
+  if (error) { showMsg(msgEl, error.message, false); return; }
+  showMsg(msgEl, "Updated.", true);
+  loadMatchList(document.getElementById("editLeague").value);
+};
+
+checkSession();
+</script>
+
+</body>
+</html>
