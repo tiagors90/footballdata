@@ -112,4 +112,48 @@ def main():
 
             home_id = team_id_by_name.get(row["HomeTeam"])
             away_id = team_id_by_name.get(row["AwayTeam"])
-            if home_id is
+            if home_id is None or away_id is None:
+                unknown = row["HomeTeam"] if home_id is None else row["AwayTeam"]
+                print(f"[{league_name}] team name not recognized: '{unknown}' "
+                      f"(add to team_aliases if this keeps appearing)")
+                total_skipped_unmatched += 1
+                continue
+
+            key = (match_date, home_id, away_id)
+            existing_match = existing_by_key.get(key)
+            if not existing_match:
+                total_no_match_found += 1
+                continue  # no corresponding match in your DB yet -- nothing to backfill
+
+            if existing_match["home_corners"] is not None:
+                continue  # already filled in, never overwrite
+
+            hc, ac = row.get("HC"), row.get("AC")
+            hy, ay = row.get("HY", "0"), row.get("AY", "0")
+            hr, ar = row.get("HR", "0"), row.get("AR", "0")
+            if not hc or not ac:
+                continue  # this source doesn't have corners for this match either
+
+            sb_patch(f"matches?id=eq.{existing_match['id']}", {
+                "home_corners": int(hc),
+                "away_corners": int(ac),
+                "home_yellow": int(hy or 0),
+                "away_yellow": int(ay or 0),
+                "home_red": int(hr or 0),
+                "away_red": int(ar or 0),
+            })
+            filled_this_league += 1
+            home_name = team_name_by_id.get(home_id, row["HomeTeam"])
+            away_name = team_name_by_id.get(away_id, row["AwayTeam"])
+            print(f"  [{league_name}] {match_date}  {home_name} vs {away_name}  "
+                  f"-> corners {hc}-{ac}, cards Y{hy}/R{hr} - Y{ay}/R{ar}")
+
+        print(f"[{league_name}] {filled_this_league} match(es) backfilled with corners/cards.")
+        total_filled += filled_this_league
+
+    print(f"\nDone. {total_filled} total backfilled, {total_skipped_unmatched} unmatched team names, "
+          f"{total_no_match_found} rows with no corresponding match in your database yet.")
+
+
+if __name__ == "__main__":
+    main()
