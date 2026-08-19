@@ -1,7 +1,9 @@
 name: Backfill corners and cards
 
 on:
-  workflow_dispatch: {}  # manual trigger -- run whenever you want to check for updates
+  schedule:
+    - cron: "0 6 * * 3"  # 06:00 UTC every Wednesday
+  workflow_dispatch: {}  # manual trigger still available whenever you want it
 
 jobs:
   backfill:
