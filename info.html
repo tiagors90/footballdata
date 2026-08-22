@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About &amp; Legend — Football Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --turf: #1B4332; --turf-light: #2D6A4F; --chalk: #F7F5F0;
+    --card: #FFFFFF; --ink: #1B1B1B; --ink-soft: #6B6A63; --line: #E1DDD0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--chalk); color: var(--ink); font-family: 'Inter', sans-serif; padding-bottom: 50px; }
+
+  header.hero {
+    background: linear-gradient(180deg, var(--turf) 0%, var(--turf-light) 100%);
+    color: var(--chalk); padding: 26px 20px 20px;
+  }
+  h1.title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 24px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .subtitle { font-size: 13px; color: rgba(247,245,240,0.75); margin-top: 4px; }
+  a.back-link { color: var(--chalk); font-size: 12px; text-decoration: underline; display: inline-block; margin-top: 14px; }
+
+  main { padding: 16px; max-width: 560px; margin: 0 auto; }
+
+  section.panel { margin-bottom: 24px; }
+  .panel-title {
+    font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--ink-soft); margin: 0 0 10px 2px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .card p { font-size: 14px; line-height: 1.55; color: var(--ink); }
+  .card p + p { margin-top: 10px; }
+  .card a { color: var(--turf); font-weight: 600; }
+
+  .legend-group { margin-bottom: 16px; }
+  .legend-group:last-child { margin-bottom: 0; }
+  .legend-group h3 {
+    font-family: 'Oswald', sans-serif; font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--turf); margin-bottom: 6px;
+  }
+  .legend-row {
+    display: flex; justify-content: space-between; gap: 12px;
+    padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13.5px;
+  }
+  .legend-row:last-child { border-bottom: none; }
+  .legend-abbr {
+    font-family: 'Oswald', sans-serif; font-weight: 600; color: var(--ink);
+    flex-shrink: 0; min-width: 84px;
+  }
+  .legend-desc { color: var(--ink-soft); text-align: right; }
+
+  .source-row { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .source-row:last-child { border-bottom: none; }
+  .source-name { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 14px; margin-bottom: 3px; }
+  .source-desc { font-size: 13px; color: var(--ink-soft); line-height: 1.5; }
+  .source-tag {
+    display: inline-block; font-size: 9.5px; font-family: 'Oswald', sans-serif; text-transform: uppercase;
+    letter-spacing: 0.4px; background: var(--line); color: var(--ink-soft); padding: 2px 8px;
+    border-radius: 5px; margin-top: 6px;
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1 class="title">About &amp; Legend</h1>
+  <div class="subtitle">What the numbers mean, and where they come from</div>
+  <a class="back-link" href="./">&larr; Back to Football Tracker</a>
+</header>
+
+<main>
+
+  <section class="panel">
+    <div class="panel-title">About this site</div>
+    <div class="card">
+      <p>This is a small personal project tracking match results, corners, and cards across seven European football leagues. It started as an Excel spreadsheet and grew into this — a live site reading from a proper database, updated automatically most days.</p>
+      <p>It's built for one person's curiosity, not as a commercial product — if you've stumbled onto it, feel free to look around, but don't expect guaranteed uptime or accuracy. See the data sources below for exactly where each number comes from.</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">Column legend</div>
+    <div class="card">
+
+      <div class="legend-group">
+        <h3>Top of page</h3>
+        <div class="legend-row"><span class="legend-abbr">Matches</span><span class="legend-desc">Total matches logged, all leagues combined</span></div>
+        <div class="legend-row"><span class="legend-abbr">Goals</span><span class="legend-desc">Total goals scored, all leagues combined</span></div>
+        <div class="legend-row"><span class="legend-abbr">Goals / match</span><span class="legend-desc">Average goals per match, all leagues combined</span></div>
+      </div>
+
+      <div class="legend-group">
+        <h3>Goals tab</h3>
+        <div class="legend-row"><span class="legend-abbr">P</span><span class="legend-desc">Played</span></div>
+        <div class="legend-row"><span class="legend-abbr">GF</span><span class="legend-desc">Goals for</span></div>
+        <div class="legend-row"><span class="legend-abbr">GA</span><span class="legend-desc">Goals against</span></div>
+        <div class="legend-row"><span class="legend-abbr">GD</span><span class="legend-desc">Goal difference (GF − GA)</span></div>
+      </div>
+
+      <div class="legend-group">
+        <h3>Corners tab</h3>
+        <div class="legend-row"><span class="legend-abbr">P</span><span class="legend-desc">Played</span></div>
+        <div class="legend-row"><span class="legend-abbr">CF</span><span class="legend-desc">Total corners for (season)</span></div>
+        <div class="legend-row"><span class="legend-abbr">CA</span><span class="legend-desc">Total corners against (season)</span></div>
+        <div class="legend-row"><span class="legend-abbr">Avg Home</span><span class="legend-desc">Average corners won in home matches only</span></div>
+        <div class="legend-row"><span class="legend-abbr">Avg Away</span><span class="legend-desc">Average corners won in away matches only</span></div>
+        <div class="legend-row"><span class="legend-abbr">Avg Total</span><span class="legend-desc">Average corners won per match, home and away combined</span></div>
+      </div>
+
+      <div class="legend-group">
+        <h3>Cards tab</h3>
+        <div class="legend-row"><span class="legend-abbr">P</span><span class="legend-desc">Played</span></div>
+        <div class="legend-row"><span class="legend-abbr">Y</span><span class="legend-desc">Total yellow cards (season)</span></div>
+        <div class="legend-row"><span class="legend-abbr">R</span><span class="legend-desc">Total red cards (season)</span></div>
+        <div class="legend-row"><span class="legend-abbr">Avg</span><span class="legend-desc">Average yellow + red cards per match</span></div>
+      </div>
+
+      <div class="legend-group">
+        <h3>Recent results cards</h3>
+        <div class="legend-row"><span class="legend-abbr">Corners line</span><span class="legend-desc">Home corners – away corners</span></div>
+        <div class="legend-row"><span class="legend-abbr">Cards line</span><span class="legend-desc">Home yellow/red – away yellow/red</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">Where the data comes from</div>
+    <div class="card">
+
+      <div class="source-row">
+        <div class="source-name">Scores &amp; results</div>
+        <div class="source-desc">Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and Liga Portugal are pulled daily from <a href="https://www.football-data.org" target="_blank" rel="noopener">football-data.org</a>'s free API.</div>
+        <span class="source-tag">Updated daily</span>
+      </div>
+
+      <div class="source-row">
+        <div class="source-name">Corners &amp; cards</div>
+        <div class="source-desc">For the same six leagues, corners and card counts are backfilled from <a href="https://www.football-data.co.uk" target="_blank" rel="noopener">football-data.co.uk</a>'s free downloadable match data.</div>
+        <span class="source-tag">Updated weekly</span>
+      </div>
+
+      <div class="source-row">
+        <div class="source-name">Liga 1 (Romania)</div>
+        <div class="source-desc">Not covered by either automated source above, so every Romanian match — scores, corners, and cards — is entered by hand.</div>
+        <span class="source-tag">Manual entry</span>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+</body>
+</html>
