@@ -404,7 +404,7 @@ function renderTeamTable(teams) {
       return [fmt(t.played), fmt(t.goals_for), fmt(t.goals_against), `<span class="${gdClass}">${fmt(gdText)}</span>`];
     };
   } else if (currentStatView === "corners") {
-    headCols = ["P", "CF", "CA", "Home", "Away", "Avg"];
+    headCols = ["P", "CF", "CA", "AVG HOME", "AVG AWAY", "AVG TOTAL"];
     rowFn = t => [
       fmt(t.played), fmt(t.corners_for), fmt(t.corners_against),
       fmt(t.avg_corners_home), fmt(t.avg_corners_away), fmt(t.avg_corners_for)
