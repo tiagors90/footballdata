@@ -26,7 +26,6 @@
   }
   .scoreface { font-family: 'Oswald', sans-serif; font-variant-numeric: tabular-nums; }
 
-  /* ---- Hero / scoreboard strip ---- */
   header.hero {
     background: var(--turf);
     background-image: linear-gradient(180deg, var(--turf) 0%, var(--turf-light) 100%);
@@ -69,7 +68,6 @@
     margin-top: 3px;
   }
 
-  /* ---- League pills ---- */
   .league-tabs {
     display: flex;
     gap: 8px;
@@ -151,20 +149,19 @@
   }
   .team-row {
     display: grid;
-    grid-template-columns: 24px 1fr 28px 28px 28px 36px;
     align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
+    gap: 6px;
+    padding: 10px 10px;
     border-bottom: 1px solid var(--line);
-    font-size: 13px;
+    font-size: 12.5px;
   }
   .team-row:last-child { border-bottom: none; }
   .team-row.head {
     font-family: 'Oswald', sans-serif;
-    font-size: 10px;
+    font-size: 9.5px;
     text-transform: uppercase;
     color: var(--ink-soft);
-    letter-spacing: 0.4px;
+    letter-spacing: 0.3px;
     padding-top: 8px; padding-bottom: 8px;
   }
   .rank { color: var(--ink-soft); font-family: 'Oswald', sans-serif; font-weight: 500; }
@@ -346,6 +343,7 @@ async function loadLeagueData() {
   currentTeams = await sb(
     "team_summary?select=team_name,played,goals_for,goals_against,goal_diff," +
     "corners_for,corners_against,avg_corners_for,avg_corners_against," +
+    "avg_corners_home,avg_corners_away," +
     "yellow_cards,red_cards,avg_cards_per_match" +
     "&league_id=eq." + currentLeagueId + "&order=goal_diff.desc,goals_for.desc"
   );
@@ -406,19 +404,25 @@ function renderTeamTable(teams) {
       return [fmt(t.played), fmt(t.goals_for), fmt(t.goals_against), `<span class="${gdClass}">${fmt(gdText)}</span>`];
     };
   } else if (currentStatView === "corners") {
-    headCols = ["P", "CF", "CA", "Avg"];
-    rowFn = t => [fmt(t.played), fmt(t.corners_for), fmt(t.corners_against), fmt(t.avg_corners_for)];
+    headCols = ["P", "CF", "CA", "Home", "Away", "Avg"];
+    rowFn = t => [
+      fmt(t.played), fmt(t.corners_for), fmt(t.corners_against),
+      fmt(t.avg_corners_home), fmt(t.avg_corners_away), fmt(t.avg_corners_for)
+    ];
   } else {
     headCols = ["P", "Y", "R", "Avg"];
     rowFn = t => [fmt(t.played), fmt(t.yellow_cards), fmt(t.red_cards), fmt(t.avg_cards_per_match)];
   }
 
-  let html = `<div class="team-row head">
+  // rank column (24px) + team name (flexible) + N stat columns, evenly split
+  const gridTemplate = `24px 1fr repeat(${headCols.length}, minmax(0, 1fr))`;
+
+  let html = `<div class="team-row head" style="grid-template-columns:${gridTemplate}">
     <div>#</div><div>Team</div>${headCols.map(c => `<div style="text-align:center">${c}</div>`).join("")}
   </div>`;
   teams.forEach((t, i) => {
     const cols = rowFn(t);
-    html += `<div class="team-row">
+    html += `<div class="team-row" style="grid-template-columns:${gridTemplate}">
       <div class="rank">${i + 1}</div>
       <div class="team-name">${t.team_name}</div>
       ${cols.map(c => `<div class="stat-num">${c}</div>`).join("")}
