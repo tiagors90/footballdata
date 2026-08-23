@@ -15,11 +15,12 @@ What it does each run, per league with a source_code set:
      teams/leagues tables (name mismatches are logged and skipped, not
      silently dropped).
   4. Upserts matches on source_fixture_id, so re-running never duplicates.
-  5. Updates leagues.last_pulled.
+  5. Updates leagues.last_pulled -- but never past SAFE_LAG_DAYS ago, so a
+     match played later the same day this script runs can never be
+     permanently skipped.
 
 Corners and cards are NOT set by this script -- football-data.org's free
-tier doesn't provide them. Keep entering those manually (Supabase Table
-Editor works fine from a phone).
+tier doesn't provide them. See backfill_corners_cards.py for that.
 """
 
 import os
@@ -79,8 +80,6 @@ def main():
     teams = sb_get("teams?select=id,name")
     team_id_by_name = {t["name"]: t["id"] for t in teams}
 
-    # Layer in known aliases (football-data.org's official names -> your team_id),
-    # so e.g. "Sport Lisboa e Benfica" resolves to the same team as "Benfica".
     try:
         aliases = sb_get("team_aliases?select=alias,team_id")
         for a in aliases:
@@ -124,6 +123,7 @@ def main():
         matches = data.get("matches", [])
 
         rows = []
+        row_labels = []  # parallel list of human-readable descriptions, same order as rows
         for m in matches:
             home_name = m["homeTeam"]["name"]
             away_name = m["awayTeam"]["name"]
@@ -137,8 +137,9 @@ def main():
                 continue
 
             full_time = m["score"]["fullTime"]
+            match_date = m["utcDate"][:10]
             rows.append({
-                "match_date": m["utcDate"][:10],
+                "match_date": match_date,
                 "league_id": league["id"],
                 "home_team_id": home_id,
                 "away_team_id": away_id,
@@ -146,9 +147,14 @@ def main():
                 "away_goals": full_time["away"],
                 "source_fixture_id": str(m["id"]),
             })
+            row_labels.append(
+                f"  [{league['name']}] {match_date}  {home_name} {full_time['home']}-{full_time['away']} {away_name}"
+            )
 
         sb_upsert_matches(rows)
         total_added += len(rows)
+        for label in row_labels:
+            print(label)
         print(f"  {len(rows)} match(es) upserted.")
 
         # Only mark days as "fully checked" up to SAFE_LAG_DAYS ago -- never
