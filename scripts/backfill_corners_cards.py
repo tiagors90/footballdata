@@ -8,6 +8,13 @@ SofaScore/LiveScore, which explicitly prohibit it).
 Only fills in corners/cards where they're currently NULL -- never overwrites
 anything you've already entered by hand or via a previous run.
 
+Handles one known data quirk: football-data.co.uk occasionally lists a
+match with home/away reversed compared to the actual fixture (confirmed via
+Stade Rennais vs PSG, 2026-08-23 -- their CSV said PSG were home, but Stade
+Rennais actually hosted). If the direct (date, home, away) lookup misses, we
+try the swapped pairing before giving up, and apply the stats to the correct
+side if that's what matches.
+
 Run manually via GitHub Actions (workflow_dispatch), or on the weekly
 schedule -- see .github/workflows/backfill-corners-cards.yml.
 """
@@ -77,6 +84,7 @@ def main():
     total_filled = 0
     total_skipped_unmatched = 0
     total_no_match_found = 0
+    total_reversed = 0
 
     for code, league_name in LEAGUE_CODES.items():
         league_id = leagues.get(league_name)
@@ -95,7 +103,6 @@ def main():
             f"matches?select=id,match_date,home_team_id,away_team_id,home_corners"
             f"&league_id=eq.{league_id}"
         )
-        print(f"[{league_name}] loaded {len(existing)} existing match(es) for comparison.")
         existing_by_key = {
             (m["match_date"], m["home_team_id"], m["away_team_id"]): m for m in existing
         }
@@ -120,24 +127,20 @@ def main():
                 total_skipped_unmatched += 1
                 continue
 
-            key = (match_date, home_id, away_id)
-            existing_match = existing_by_key.get(key)
+            existing_match = existing_by_key.get((match_date, home_id, away_id))
+            reversed_match = False
+            if not existing_match:
+                existing_match = existing_by_key.get((match_date, away_id, home_id))
+                reversed_match = True
+
             if not existing_match:
                 home_name = team_name_by_id.get(home_id, row["HomeTeam"])
                 away_name = team_name_by_id.get(away_id, row["AwayTeam"])
                 print(f"  [{league_name}] no match in your database for {match_date}  "
                       f"{home_name} vs {away_name} (from football-data.co.uk) -- "
                       f"not pulled yet, or a date/team mismatch")
-                print(f"    debug: looked up key {key!r} (types: "
-                      f"{type(match_date).__name__}, {type(home_id).__name__}, {type(away_id).__name__})")
-                same_date_keys = [k for k in existing_by_key if k[0] == match_date]
-                if same_date_keys:
-                    print(f"    debug: existing rows on {match_date} in this league: {same_date_keys!r}")
-                else:
-                    print(f"    debug: no existing rows at all for {match_date} in this league "
-                          f"(out of {len(existing)} loaded)")
                 total_no_match_found += 1
-                continue  # no corresponding match in your DB yet -- nothing to backfill
+                continue
 
             if existing_match["home_corners"] is not None:
                 continue  # already filled in, never overwrite
@@ -148,24 +151,37 @@ def main():
             if not hc or not ac:
                 continue  # this source doesn't have corners for this match either
 
-            sb_patch(f"matches?id=eq.{existing_match['id']}", {
-                "home_corners": int(hc),
-                "away_corners": int(ac),
-                "home_yellow": int(hy or 0),
-                "away_yellow": int(ay or 0),
-                "home_red": int(hr or 0),
-                "away_red": int(ar or 0),
-            })
+            if reversed_match:
+                # football-data.co.uk has home/away swapped vs. your database
+                # for this match -- apply the stats to the correct side.
+                update_body = {
+                    "home_corners": int(ac), "away_corners": int(hc),
+                    "home_yellow": int(ay or 0), "away_yellow": int(hy or 0),
+                    "home_red": int(ar or 0), "away_red": int(hr or 0),
+                }
+            else:
+                update_body = {
+                    "home_corners": int(hc), "away_corners": int(ac),
+                    "home_yellow": int(hy or 0), "away_yellow": int(ay or 0),
+                    "home_red": int(hr or 0), "away_red": int(ar or 0),
+                }
+
+            sb_patch(f"matches?id=eq.{existing_match['id']}", update_body)
             filled_this_league += 1
+            if reversed_match:
+                total_reversed += 1
+
             home_name = team_name_by_id.get(home_id, row["HomeTeam"])
             away_name = team_name_by_id.get(away_id, row["AwayTeam"])
+            note = "  (home/away reversed vs. football-data.co.uk)" if reversed_match else ""
             print(f"  [{league_name}] {match_date}  {home_name} vs {away_name}  "
-                  f"-> corners {hc}-{ac}, cards Y{hy}/R{hr} - Y{ay}/R{ar}")
+                  f"-> corners {hc}-{ac}, cards Y{hy}/R{hr} - Y{ay}/R{ar}{note}")
 
         print(f"[{league_name}] {filled_this_league} match(es) backfilled with corners/cards.")
         total_filled += filled_this_league
 
-    print(f"\nDone. {total_filled} total backfilled, {total_skipped_unmatched} unmatched team names, "
+    print(f"\nDone. {total_filled} total backfilled ({total_reversed} with home/away corrected), "
+          f"{total_skipped_unmatched} unmatched team names, "
           f"{total_no_match_found} rows with no corresponding match in your database yet.")
 
 
