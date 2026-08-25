@@ -152,19 +152,24 @@ def main():
                 continue  # this source doesn't have corners for this match either
 
             if reversed_match:
-                # football-data.co.uk has home/away swapped vs. your database
-                # for this match -- apply the stats to the correct side.
-                update_body = {
-                    "home_corners": int(ac), "away_corners": int(hc),
-                    "home_yellow": int(ay or 0), "away_yellow": int(hy or 0),
-                    "home_red": int(ar or 0), "away_red": int(hr or 0),
-                }
-            else:
-                update_body = {
-                    "home_corners": int(hc), "away_corners": int(ac),
-                    "home_yellow": int(hy or 0), "away_yellow": int(ay or 0),
-                    "home_red": int(hr or 0), "away_red": int(ar or 0),
-                }
+                # football-data.co.uk had this row's HomeTeam/AwayTeam text
+                # labels scrambled (confirmed via a real match check) -- but
+                # HC/AC and the card columns still correctly correspond to
+                # the actual home/away teams, same as any normal row. So we
+                # apply them exactly as normal; "reversed_match" only mattered
+                # for locating the right row above, not for how we use the
+                # numbers once found.
+                pass
+
+            final_home_corners, final_away_corners = int(hc), int(ac)
+            final_home_yellow, final_away_yellow = int(hy or 0), int(ay or 0)
+            final_home_red, final_away_red = int(hr or 0), int(ar or 0)
+
+            update_body = {
+                "home_corners": final_home_corners, "away_corners": final_away_corners,
+                "home_yellow": final_home_yellow, "away_yellow": final_away_yellow,
+                "home_red": final_home_red, "away_red": final_away_red,
+            }
 
             sb_patch(f"matches?id=eq.{existing_match['id']}", update_body)
             filled_this_league += 1
@@ -173,9 +178,10 @@ def main():
 
             home_name = team_name_by_id.get(home_id, row["HomeTeam"])
             away_name = team_name_by_id.get(away_id, row["AwayTeam"])
-            note = "  (home/away reversed vs. football-data.co.uk)" if reversed_match else ""
+            note = "  (matched via reversed team-name lookup; stats applied as-is)" if reversed_match else ""
             print(f"  [{league_name}] {match_date}  {home_name} vs {away_name}  "
-                  f"-> corners {hc}-{ac}, cards Y{hy}/R{hr} - Y{ay}/R{ar}{note}")
+                  f"-> corners {final_home_corners}-{final_away_corners}, "
+                  f"cards Y{final_home_yellow}/R{final_home_red} - Y{final_away_yellow}/R{final_away_red}{note}")
 
         print(f"[{league_name}] {filled_this_league} match(es) backfilled with corners/cards.")
         total_filled += filled_this_league
