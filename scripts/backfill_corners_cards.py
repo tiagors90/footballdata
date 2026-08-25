@@ -8,8 +8,8 @@ SofaScore/LiveScore, which explicitly prohibit it).
 Only fills in corners/cards where they're currently NULL -- never overwrites
 anything you've already entered by hand or via a previous run.
 
-Run manually via GitHub Actions (workflow_dispatch) -- see
-.github/workflows/backfill-corners-cards.yml.
+Run manually via GitHub Actions (workflow_dispatch), or on the weekly
+schedule -- see .github/workflows/backfill-corners-cards.yml.
 """
 
 import csv
@@ -122,6 +122,11 @@ def main():
             key = (match_date, home_id, away_id)
             existing_match = existing_by_key.get(key)
             if not existing_match:
+                home_name = team_name_by_id.get(home_id, row["HomeTeam"])
+                away_name = team_name_by_id.get(away_id, row["AwayTeam"])
+                print(f"  [{league_name}] no match in your database for {match_date}  "
+                      f"{home_name} vs {away_name} (from football-data.co.uk) -- "
+                      f"not pulled yet, or a date/team mismatch")
                 total_no_match_found += 1
                 continue  # no corresponding match in your DB yet -- nothing to backfill
 
