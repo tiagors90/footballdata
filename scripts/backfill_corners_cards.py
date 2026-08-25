@@ -95,6 +95,7 @@ def main():
             f"matches?select=id,match_date,home_team_id,away_team_id,home_corners"
             f"&league_id=eq.{league_id}"
         )
+        print(f"[{league_name}] loaded {len(existing)} existing match(es) for comparison.")
         existing_by_key = {
             (m["match_date"], m["home_team_id"], m["away_team_id"]): m for m in existing
         }
@@ -127,6 +128,14 @@ def main():
                 print(f"  [{league_name}] no match in your database for {match_date}  "
                       f"{home_name} vs {away_name} (from football-data.co.uk) -- "
                       f"not pulled yet, or a date/team mismatch")
+                print(f"    debug: looked up key {key!r} (types: "
+                      f"{type(match_date).__name__}, {type(home_id).__name__}, {type(away_id).__name__})")
+                same_date_keys = [k for k in existing_by_key if k[0] == match_date]
+                if same_date_keys:
+                    print(f"    debug: existing rows on {match_date} in this league: {same_date_keys!r}")
+                else:
+                    print(f"    debug: no existing rows at all for {match_date} in this league "
+                          f"(out of {len(existing)} loaded)")
                 total_no_match_found += 1
                 continue  # no corresponding match in your DB yet -- nothing to backfill
 
