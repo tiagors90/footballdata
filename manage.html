@@ -151,6 +151,8 @@
 
     <div class="card hidden" id="editFormCard">
       <div id="editHeader" style="font-family:'Oswald',sans-serif; font-size:14px; margin-bottom:8px;"></div>
+      <label>Date</label>
+      <input type="date" id="editDate">
       <div class="row2">
         <div><label>Home goals</label><input type="number" id="editHG" min="0"></div>
         <div><label>Away goals</label><input type="number" id="editAG" min="0"></div>
@@ -368,7 +370,8 @@ async function openEditForm(matchId) {
   if (error) { alert(error.message); return; }
 
   editingMatchId = matchId;
-  document.getElementById("editHeader").textContent = `${m.match_date} — ${m.home_team.name} vs ${m.away_team.name}`;
+  document.getElementById("editHeader").textContent = `${m.home_team.name} vs ${m.away_team.name}`;
+  document.getElementById("editDate").value = m.match_date;
   document.getElementById("editHG").value = m.home_goals;
   document.getElementById("editAG").value = m.away_goals;
   document.getElementById("editHC").value = m.home_corners ?? "";
@@ -393,7 +396,15 @@ document.getElementById("editSaveBtn").onclick = async () => {
   btn.disabled = true;
   const msgEl = document.getElementById("editMsg");
 
+  const newDate = document.getElementById("editDate").value;
+  if (!newDate) {
+    showMsg(msgEl, "Date can't be empty.", false);
+    btn.disabled = false;
+    return;
+  }
+
   const updates = {
+    match_date: newDate,
     home_goals: Number(document.getElementById("editHG").value || 0),
     away_goals: Number(document.getElementById("editAG").value || 0),
     home_corners: document.getElementById("editHC").value === "" ? null : Number(document.getElementById("editHC").value),
