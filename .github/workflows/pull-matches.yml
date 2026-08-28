@@ -2,8 +2,8 @@ name: Pull new matches
 
 on:
   schedule:
-    # 06:00 UTC daily. Adjust the cron if you want a different time.
-    - cron: "0 6 * * *"
+    # 06:17 UTC daily. Adjust the cron if you want a different time.
+    - cron: "17 6 * * *"
   workflow_dispatch: {}  # adds a manual "Run workflow" button in the Actions tab
 
 jobs:
