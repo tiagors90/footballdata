@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Football Stats</title>
+<title>Football Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -51,12 +51,13 @@
   .subtitle { font-size: 13px; color: rgba(247,245,240,0.75); margin-top: 4px; position: relative; }
   .stat-strip {
     display: flex;
-    gap: 22px;
+    flex-wrap: wrap;
+    gap: 16px 22px;
     margin-top: 18px;
     position: relative;
   }
   .stat-block .num {
-    font-size: 32px;
+    font-size: 26px;
     font-weight: 600;
     line-height: 1;
   }
@@ -248,12 +249,14 @@
 <body>
 
 <header class="hero">
-  <h1 class="title">Football Stats</h1>
-  <div class="subtitle">Seven leagues, all in one place/page</div>
+  <h1 class="title">Football Tracker</h1>
+  <div class="subtitle">Multiple leagues, one scoreboard</div>
   <div class="stat-strip">
     <div class="stat-block"><div class="num scoreface" id="statMatches">–</div><div class="label">Matches</div></div>
     <div class="stat-block"><div class="num scoreface" id="statGoals">–</div><div class="label">Goals</div></div>
     <div class="stat-block"><div class="num scoreface" id="statAvg">–</div><div class="label">Goals / match</div></div>
+    <div class="stat-block"><div class="num scoreface" id="statAvgCorners">–</div><div class="label">Corners / match</div></div>
+    <div class="stat-block"><div class="num scoreface" id="statAvgCards">–</div><div class="label">Cards / match</div></div>
   </div>
 </header>
 
@@ -280,7 +283,7 @@
   </section>
 
   <div style="text-align:center; padding: 10px 0 20px;">
-    <a href="./info.html" style="font-size:12px; color:var(--ink-soft); text-decoration:underline;">For info about this project (column legends, data source, etc.), go here.</a>
+    <a href="./info.html" style="font-size:12px; color:var(--ink-soft); text-decoration:underline;">About &amp; column legend</a>
   </div>
 </main>
 
@@ -330,12 +333,16 @@ function renderTabs() {
 }
 
 async function loadGlobalStats() {
-  const summary = await sb("league_summary?select=matches_played,total_goals");
+  const summary = await sb("league_summary?select=matches_played,total_goals,total_corners,total_yellow,total_red");
   const matches = summary.reduce((a, r) => a + (r.matches_played || 0), 0);
   const goals = summary.reduce((a, r) => a + (r.total_goals || 0), 0);
+  const corners = summary.reduce((a, r) => a + (r.total_corners || 0), 0);
+  const cards = summary.reduce((a, r) => a + (r.total_yellow || 0) + (r.total_red || 0), 0);
   document.getElementById("statMatches").textContent = matches;
   document.getElementById("statGoals").textContent = goals;
   document.getElementById("statAvg").textContent = matches > 0 ? (goals / matches).toFixed(2) : "0.00";
+  document.getElementById("statAvgCorners").textContent = matches > 0 ? (corners / matches).toFixed(2) : "0.00";
+  document.getElementById("statAvgCards").textContent = matches > 0 ? (cards / matches).toFixed(2) : "0.00";
 }
 
 async function loadLeagueData() {
