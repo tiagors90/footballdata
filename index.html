@@ -508,12 +508,20 @@ async function openTeamModal(teamId, teamName) {
   document.getElementById("modalContent").innerHTML = '<div class="load-state">Loading…</div>';
   document.getElementById("teamModalOverlay").classList.remove("hidden");
 
-  const matches = await sb(
-    "matches?select=home_team_id,away_team_id,home_goals,away_goals,home_corners,away_corners," +
-    "home_yellow,home_red,away_yellow,away_red" +
-    `&league_id=eq.${currentLeagueId}` +
-    `&or=(home_team_id.eq.${teamId},away_team_id.eq.${teamId})`
-  );
+  let matches;
+  try {
+    matches = await sb(
+      "matches?select=home_team_id,away_team_id,home_goals,away_goals,home_corners,away_corners," +
+      "home_yellow,home_red,away_yellow,away_red" +
+      `&league_id=eq.${currentLeagueId}` +
+      `&or=(home_team_id.eq.${teamId},away_team_id.eq.${teamId})`
+    );
+  } catch (err) {
+    document.getElementById("modalContent").innerHTML =
+      `<div class="empty-state">Couldn't load this team's data.<br><span style="font-size:11px">${err.message}</span></div>`;
+    console.error(err);
+    return;
+  }
 
   const homeM = matches.filter(m => m.home_team_id === teamId);
   const awayM = matches.filter(m => m.away_team_id === teamId);
