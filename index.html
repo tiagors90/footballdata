@@ -244,13 +244,46 @@
     padding: 30px 10px;
   }
   .load-state { text-align: center; color: var(--ink-soft); font-size: 13px; padding: 20px; }
+
+  /* ---- Team detail modal ---- */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(27,26,26,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; padding: 16px;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal-card {
+    background: var(--card); border-radius: 14px; max-width: 380px; width: 100%;
+    padding: 20px; max-height: 85vh; overflow-y: auto;
+  }
+  .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+  .modal-title { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 17px; padding-right: 10px; }
+  .modal-close {
+    background: none; border: none; font-size: 22px; color: var(--ink-soft);
+    cursor: pointer; line-height: 1; padding: 2px 4px; flex-shrink: 0;
+  }
+  .modal-sub { font-size: 11px; color: var(--ink-soft); margin-bottom: 14px; }
+  table.modal-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+  table.modal-table th {
+    font-family: 'Oswald', sans-serif; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.3px; color: var(--ink-soft); text-align: center; padding: 7px 4px;
+    border-bottom: 1.5px solid var(--line);
+  }
+  table.modal-table td {
+    padding: 8px 4px; text-align: center; border-bottom: 1px solid var(--line);
+    font-family: 'Oswald', sans-serif;
+  }
+  table.modal-table td:first-child, table.modal-table th:first-child {
+    text-align: left; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 12.5px;
+  }
+  table.modal-table tr:last-child td { border-bottom: none; }
 </style>
 </head>
 <body>
 
 <header class="hero">
   <h1 class="title">Football Tracker</h1>
-  <div class="subtitle">Multiple leagues, one scoreboard</div>
+  <div class="subtitle">Seven leagues, one scoreboard</div>
   <div class="stat-strip">
     <div class="stat-block"><div class="num scoreface" id="statMatches">–</div><div class="label">Matches</div></div>
     <div class="stat-block"><div class="num scoreface" id="statGoals">–</div><div class="label">Goals</div></div>
@@ -352,7 +385,7 @@ async function loadLeagueData() {
   matchList.innerHTML = '<div class="load-state">Loading…</div>';
 
   currentTeams = await sb(
-    "team_summary?select=team_name,played,goals_for,goals_against,goal_diff," +
+    "team_summary?select=team_id,team_name,played,goals_for,goals_against,goal_diff," +
     "corners_for,corners_against,avg_corners_for,avg_corners_against," +
     "avg_corners_home,avg_corners_away," +
     "yellow_cards,red_cards,avg_cards_per_match" +
@@ -435,14 +468,80 @@ function renderTeamTable(teams) {
     const cols = rowFn(t);
     html += `<div class="team-row" style="grid-template-columns:${gridTemplate}">
       <div class="rank">${i + 1}</div>
-      <div class="team-name">${t.team_name}</div>
+      <div class="team-name" data-team-id="${t.team_id}" data-team-name="${t.team_name}"
+           style="cursor:pointer; text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:2px;">${t.team_name}</div>
       ${cols.map(c => `<div class="stat-num">${c}</div>`).join("")}
     </div>`;
   });
   teamTable.innerHTML = html;
 }
 
-async function init() {
+// ---------- TEAM DETAIL MODAL ----------
+document.getElementById("teamTable").addEventListener("click", (e) => {
+  const el = e.target.closest(".team-name[data-team-id]");
+  if (!el) return;
+  openTeamModal(Number(el.dataset.teamId), el.dataset.teamName);
+});
+
+document.getElementById("modalCloseBtn").onclick = closeTeamModal;
+document.getElementById("teamModalOverlay").addEventListener("click", (e) => {
+  if (e.target.id === "teamModalOverlay") closeTeamModal();
+});
+
+function closeTeamModal() {
+  document.getElementById("teamModalOverlay").classList.add("hidden");
+}
+
+function avgOf(arr) {
+  const vals = arr.filter(v => v !== null && v !== undefined);
+  if (vals.length === 0) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
+function fmtAvg(n) {
+  return n === null ? "–" : n.toFixed(2);
+}
+
+async function openTeamModal(teamId, teamName) {
+  document.getElementById("modalTeamName").textContent = teamName;
+  document.getElementById("modalTeamSub").textContent = "";
+  document.getElementById("modalContent").innerHTML = '<div class="load-state">Loading…</div>';
+  document.getElementById("teamModalOverlay").classList.remove("hidden");
+
+  const matches = await sb(
+    "matches?select=home_team_id,away_team_id,home_goals,away_goals,home_corners,away_corners," +
+    "home_yellow,home_red,away_yellow,away_red" +
+    `&league_id=eq.${currentLeagueId}` +
+    `&or=(home_team_id.eq.${teamId},away_team_id.eq.${teamId})`
+  );
+
+  const homeM = matches.filter(m => m.home_team_id === teamId);
+  const awayM = matches.filter(m => m.away_team_id === teamId);
+
+  document.getElementById("modalTeamSub").textContent =
+    `${matches.length} match${matches.length === 1 ? "" : "es"} played (${homeM.length} home, ${awayM.length} away)`;
+
+  const rows = [
+    ["Goals for", fmtAvg(avgOf(homeM.map(m => m.home_goals))), fmtAvg(avgOf(awayM.map(m => m.away_goals)))],
+    ["Goals against", fmtAvg(avgOf(homeM.map(m => m.away_goals))), fmtAvg(avgOf(awayM.map(m => m.home_goals)))],
+    ["Corners for", fmtAvg(avgOf(homeM.map(m => m.home_corners))), fmtAvg(avgOf(awayM.map(m => m.away_corners)))],
+    ["Corners against", fmtAvg(avgOf(homeM.map(m => m.away_corners))), fmtAvg(avgOf(awayM.map(m => m.home_corners)))],
+    ["Yellow cards", fmtAvg(avgOf(homeM.map(m => m.home_yellow))), fmtAvg(avgOf(awayM.map(m => m.away_yellow)))],
+    ["Red cards", fmtAvg(avgOf(homeM.map(m => m.home_red))), fmtAvg(avgOf(awayM.map(m => m.away_red)))],
+  ];
+
+  document.getElementById("modalContent").innerHTML = `
+    <table class="modal-table">
+      <tr><th>Per match (avg)</th><th>Home</th><th>Away</th></tr>
+      ${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("")}
+    </table>
+    <div style="font-size:10.5px; color:var(--ink-soft); margin-top:10px;">
+      Corners/cards averages only count matches where that data has been entered.
+    </div>
+  `;
+}
+
+
   try {
     leagues = await sb("leagues?select=id,name,color&order=id.asc");
     if (leagues.length === 0) {
@@ -461,6 +560,17 @@ async function init() {
 
 init();
 </script>
+
+<div class="modal-overlay hidden" id="teamModalOverlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTeamName">Team</div>
+      <button class="modal-close" id="modalCloseBtn">&times;</button>
+    </div>
+    <div class="modal-sub" id="modalTeamSub"></div>
+    <div id="modalContent"><div class="load-state">Loading…</div></div>
+  </div>
+</div>
 
 </body>
 </html>
