@@ -550,6 +550,7 @@ async function openTeamModal(teamId, teamName) {
 }
 
 
+async function init() {
   try {
     leagues = await sb("leagues?select=id,name,color&order=id.asc");
     if (leagues.length === 0) {
