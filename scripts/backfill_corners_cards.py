@@ -38,10 +38,12 @@ SB_HEADERS = {
 # football-data.co.uk league code -> your league name in Supabase
 LEAGUE_CODES = {
     "E0":  "Premier League",
+    "E1":  "Championship",
     "SP1": "La Liga",
     "I1":  "Serie A",
     "D1":  "Bundesliga",
     "F1":  "Ligue 1",
+    "N1":  "Eredivisie",
     "P1":  "Liga Portugal",
 }
 
