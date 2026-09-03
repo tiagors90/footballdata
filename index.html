@@ -320,6 +320,17 @@
   </div>
 </main>
 
+<div class="modal-overlay hidden" id="teamModalOverlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTeamName">Team</div>
+      <button class="modal-close" id="modalCloseBtn">&times;</button>
+    </div>
+    <div class="modal-sub" id="modalTeamSub"></div>
+    <div id="modalContent"><div class="load-state">Loading…</div></div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = "https://myjwctfetxuyqndbnodg.supabase.co";
 const SUPABASE_KEY = "sb_publishable_w7rOiDHLvmeWG1kK2tILmA_XVAz7Ucc";
@@ -569,17 +580,6 @@ async function init() {
 
 init();
 </script>
-
-<div class="modal-overlay hidden" id="teamModalOverlay">
-  <div class="modal-card">
-    <div class="modal-header">
-      <div class="modal-title" id="modalTeamName">Team</div>
-      <button class="modal-close" id="modalCloseBtn">&times;</button>
-    </div>
-    <div class="modal-sub" id="modalTeamSub"></div>
-    <div id="modalContent"><div class="load-state">Loading…</div></div>
-  </div>
-</div>
 
 </body>
 </html>
