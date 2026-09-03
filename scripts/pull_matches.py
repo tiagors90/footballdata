@@ -111,7 +111,12 @@ def main():
         resp = requests.get(
             f"{FD_BASE}/competitions/{code}/matches",
             headers=FD_HEADERS,
-            params={"dateFrom": date_from.isoformat(), "dateTo": date_to.isoformat(), "status": "FINISHED"},
+            params={
+                "dateFrom": date_from.isoformat(),
+                "dateTo": date_to.isoformat(),
+                "status": "FINISHED",
+                "limit": 500,  # avoid silent pagination truncation on wide date ranges
+            },
             timeout=20,
         )
 
@@ -121,6 +126,12 @@ def main():
 
         data = resp.json()
         matches = data.get("matches", [])
+
+        result_count = data.get("resultSet", {}).get("count")
+        if result_count is not None and result_count > len(matches):
+            print(f"  WARNING: API reports {result_count} total matches but only "
+                  f"{len(matches)} were returned -- results may be truncated. "
+                  f"Consider narrowing the date range or increasing 'limit'.")
 
         rows = []
         row_labels = []  # parallel list of human-readable descriptions, same order as rows
