@@ -79,9 +79,8 @@
   <section class="panel">
     <div class="panel-title">About this site</div>
     <div class="card">
-      <p>This is a small personal project tracking match results, corners, and cards across multiple European football leagues. It started as an Excel spreadsheet and grew into this — a live site reading from a proper database, updated automatically most days.</p>
+      <p>This is a small personal project tracking match results, corners, and cards across seven European football leagues. It started as an Excel spreadsheet and grew into this — a live site reading from a proper database, updated automatically most days.</p>
       <p>It's built for one person's curiosity, not as a commercial product — if you've stumbled onto it, feel free to look around, but don't expect guaranteed uptime or accuracy. See the data sources below for exactly where each number comes from.</p>
-      <p>All of this is vibecoded, so don't expect it to be perfect, or to not contain any possible mistakes.</p>
     </div>
   </section>
 
@@ -137,13 +136,13 @@
 
       <div class="source-row">
         <div class="source-name">Scores &amp; results</div>
-        <div class="source-desc">Premier League, Championship, La Liga, Serie A, Bundesliga, Ligue 1, Liga Portugal and Eredivisie are pulled daily from <a href="https://www.football-data.org" target="_blank" rel="noopener">football-data.org</a>'s free API.</div>
+        <div class="source-desc">Premier League, Championship, La Liga, Serie A, Bundesliga, Ligue 1, Eredivisie, and Liga Portugal are pulled daily from <a href="https://www.football-data.org" target="_blank" rel="noopener">football-data.org</a>'s free API.</div>
         <span class="source-tag">Updated daily</span>
       </div>
 
       <div class="source-row">
         <div class="source-name">Corners &amp; cards</div>
-        <div class="source-desc">For the same leagues listed, corners and card counts are backfilled from <a href="https://www.football-data.co.uk" target="_blank" rel="noopener">football-data.co.uk</a>'s free downloadable match data. This runs automatically once a week (on Wednesday's), and ocasionally manually triggered between that period.</div>
+        <div class="source-desc">For the same eight leagues, corners and card counts are backfilled from <a href="https://www.football-data.co.uk" target="_blank" rel="noopener">football-data.co.uk</a>'s free downloadable match data.</div>
         <span class="source-tag">Updated weekly</span>
       </div>
 
@@ -156,7 +155,22 @@
     </div>
   </section>
 
+  <section class="panel">
+    <div class="panel-title">Privacy &amp; analytics</div>
+    <div class="card">
+      <p>This site logs basic technical data when you use it: your IP address, approximate location (country/city, derived from that IP), browser/device identifier (user-agent string), which page or data was accessed, and a timestamp.</p>
+      <p><strong>Why:</strong> to understand basic usage and guard against abuse of the underlying database.</p>
+      <p><strong>How long:</strong> kept for 60 days, then automatically and permanently deleted.</p>
+      <p><strong>Who's responsible:</strong> Tiago, who built and runs this project. If you have any question or want something removed sooner, just ask directly.</p>
+      <p>This log is not publicly viewable and is stored separately from the football data itself.</p>
+    </div>
+  </section>
+
 </main>
+
+<script>
+navigator.sendBeacon("https://footballdata-proxy.tiago-soares20.workers.dev/log/pageview?page=info");
+</script>
 
 </body>
 </html>
