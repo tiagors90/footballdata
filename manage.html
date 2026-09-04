@@ -60,6 +60,24 @@
   .match-pick:active { background: var(--chalk); }
   .match-pick .d { color: var(--ink-soft); font-size: 11px; }
 
+  .log-entry {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 6px; font-size: 13px;
+  }
+  .log-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .log-when { color: var(--ink-soft); font-size: 11px; font-family: 'Oswald', sans-serif; }
+  .log-badge {
+    font-family: 'Oswald', sans-serif; font-size: 9.5px; text-transform: uppercase;
+    letter-spacing: 0.3px; padding: 2px 8px; border-radius: 5px; flex-shrink: 0;
+  }
+  .log-badge.pageview { background: #D9EAD3; color: #1D6E43; }
+  .log-badge.dbcall { background: #D9D2E9; color: #4A3C7A; }
+  .log-what { margin-top: 5px; font-family: 'Oswald', sans-serif; font-size: 12.5px; }
+  .log-what code {
+    background: var(--chalk); border-radius: 4px; padding: 1px 5px; font-size: 11.5px;
+  }
+  .log-meta { margin-top: 5px; font-size: 11px; color: var(--ink-soft); }
+
   #logoutBar { display: flex; justify-content: space-between; align-items: center; }
   #logoutBar button { background: none; border: none; color: var(--chalk); font-size: 12px;
     text-decoration: underline; cursor: pointer; }
@@ -431,8 +449,28 @@ document.getElementById("editSaveBtn").onclick = async () => {
   loadMatchList(document.getElementById("editLeague").value);
 };
 
-// ---------- ACCESS LOG (Phase 1: schema + viewer only -- populated once
-// the Cloudflare Worker logging layer is built) ----------
+// ---------- ACCESS LOG ----------
+
+function parseUserAgent(ua) {
+  if (!ua) return "Unknown device";
+
+  let os = "Unknown OS";
+  if (/iPhone|iPad|iPod/.test(ua)) os = "iOS";
+  else if (/Android/.test(ua)) os = "Android";
+  else if (/Windows/.test(ua)) os = "Windows";
+  else if (/Mac OS X/.test(ua)) os = "macOS";
+  else if (/Linux/.test(ua)) os = "Linux";
+
+  let browser = "Unknown browser";
+  if (/Edg\//.test(ua)) browser = "Edge";
+  else if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) browser = "Chrome";
+  else if (/CriOS/.test(ua)) browser = "Chrome";
+  else if (/FxiOS|Firefox\//.test(ua)) browser = "Firefox";
+  else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = "Safari";
+
+  return `${browser} on ${os}`;
+}
+
 document.getElementById("loadAccessLogBtn").onclick = async () => {
   const listEl = document.getElementById("accessLogList");
   const msgEl = document.getElementById("accessLogMsg");
@@ -452,20 +490,23 @@ document.getElementById("loadAccessLogBtn").onclick = async () => {
   }
 
   listEl.innerHTML = data.map(r => {
-    const when = new Date(r.ts).toLocaleString();
-    const where = [r.city, r.country].filter(Boolean).join(", ") || "–";
-    const what = r.event_type === "page_view"
-      ? `Viewed ${r.page || "?"}`
-      : `${r.http_method || ""} ${r.path || ""}`.trim();
-    return `<div class="match-pick" style="cursor:default;">
-      <div class="d">${when}</div>
-      <div>${what}</div>
-      <div style="font-size:11px; color:var(--ink-soft); margin-top:2px;">
-        ${r.ip || "–"} · ${where}
+    const when = new Date(r.ts).toLocaleString(undefined, {
+      month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+    const where = [r.city, r.country].filter(Boolean).join(", ") || "Unknown location";
+    const isPageView = r.event_type === "page_view";
+
+    const what = isPageView
+      ? `Viewed <code>${r.page || "?"}</code>`
+      : `<code>${r.http_method || ""}</code> ${r.path || ""}`;
+
+    return `<div class="log-entry">
+      <div class="log-top">
+        <span class="log-when">${when}</span>
+        <span class="log-badge ${isPageView ? "pageview" : "dbcall"}">${isPageView ? "Page view" : "DB call"}</span>
       </div>
-      <div style="font-size:10px; color:var(--ink-soft); margin-top:2px; word-break:break-all;">
-        ${r.user_agent || ""}
-      </div>
+      <div class="log-what">${what}</div>
+      <div class="log-meta">${r.ip || "Unknown IP"} · ${where} · ${parseUserAgent(r.user_agent)}</div>
     </div>`;
   }).join("");
 };
