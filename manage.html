@@ -185,9 +185,11 @@
 </main>
 
 <script>
-const SUPABASE_URL = "https://myjwctfetxuyqndbnodg.supabase.co";
+const SUPABASE_URL = "https://footballdata-proxy.tiago-soares20.workers.dev";
 const SUPABASE_KEY = "sb_publishable_w7rOiDHLvmeWG1kK2tILmA_XVAz7Ucc";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+navigator.sendBeacon(SUPABASE_URL + "/log/pageview?page=manage");
 
 let leagues = [];
 let teamsByLeague = {}; // league_id -> [{id,name}]
