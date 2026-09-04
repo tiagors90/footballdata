@@ -195,6 +195,10 @@
     <div class="section-title">Access log</div>
     <div class="card">
       <button class="secondary" id="loadAccessLogBtn" style="margin-top:0;">Load recent activity</button>
+      <label style="display:flex; align-items:center; gap:6px; margin-top:10px; font-size:12.5px; color:var(--ink-soft);">
+        <input type="checkbox" id="showDbCallsToggle" style="width:auto;">
+        Also show database calls (usually just page traffic noise)
+      </label>
       <div id="accessLogMsg"></div>
       <div id="accessLogList" style="margin-top:10px;"></div>
     </div>
@@ -471,25 +475,21 @@ function parseUserAgent(ua) {
   return `${browser} on ${os}`;
 }
 
-document.getElementById("loadAccessLogBtn").onclick = async () => {
+let lastAccessLogData = [];
+
+function renderAccessLog() {
   const listEl = document.getElementById("accessLogList");
-  const msgEl = document.getElementById("accessLogMsg");
-  listEl.innerHTML = '<div class="load-state">Loading…</div>';
+  const showDbCalls = document.getElementById("showDbCallsToggle").checked;
+  const rows = showDbCalls
+    ? lastAccessLogData
+    : lastAccessLogData.filter(r => r.event_type === "page_view");
 
-  const { data, error } = await sb
-    .from("access_log")
-    .select("ts,event_type,page,path,http_method,ip,country,city,user_agent")
-    .order("ts", { ascending: false })
-    .limit(100);
-
-  if (error) { showMsg(msgEl, error.message, false); listEl.innerHTML = ""; return; }
-
-  if (!data || data.length === 0) {
-    listEl.innerHTML = '<div class="msg err">No activity logged yet.</div>';
+  if (rows.length === 0) {
+    listEl.innerHTML = '<div class="msg err">No activity to show.</div>';
     return;
   }
 
-  listEl.innerHTML = data.map(r => {
+  listEl.innerHTML = rows.map(r => {
     const when = new Date(r.ts).toLocaleString(undefined, {
       month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
     });
@@ -509,6 +509,25 @@ document.getElementById("loadAccessLogBtn").onclick = async () => {
       <div class="log-meta">${r.ip || "Unknown IP"} · ${where} · ${parseUserAgent(r.user_agent)}</div>
     </div>`;
   }).join("");
+}
+
+document.getElementById("showDbCallsToggle").addEventListener("change", renderAccessLog);
+
+document.getElementById("loadAccessLogBtn").onclick = async () => {
+  const listEl = document.getElementById("accessLogList");
+  const msgEl = document.getElementById("accessLogMsg");
+  listEl.innerHTML = '<div class="load-state">Loading…</div>';
+
+  const { data, error } = await sb
+    .from("access_log")
+    .select("ts,event_type,page,path,http_method,ip,country,city,user_agent")
+    .order("ts", { ascending: false })
+    .limit(100);
+
+  if (error) { showMsg(msgEl, error.message, false); listEl.innerHTML = ""; return; }
+
+  lastAccessLogData = data || [];
+  renderAccessLog();
 };
 
 checkSession();
