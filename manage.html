@@ -174,6 +174,13 @@
       <div id="editMsg"></div>
     </div>
 
+    <div class="section-title">Access log</div>
+    <div class="card">
+      <button class="secondary" id="loadAccessLogBtn" style="margin-top:0;">Load recent activity</button>
+      <div id="accessLogMsg"></div>
+      <div id="accessLogList" style="margin-top:10px;"></div>
+    </div>
+
   </div>
 </main>
 
@@ -420,6 +427,45 @@ document.getElementById("editSaveBtn").onclick = async () => {
   if (error) { showMsg(msgEl, error.message, false); return; }
   showMsg(msgEl, "Updated.", true);
   loadMatchList(document.getElementById("editLeague").value);
+};
+
+// ---------- ACCESS LOG (Phase 1: schema + viewer only -- populated once
+// the Cloudflare Worker logging layer is built) ----------
+document.getElementById("loadAccessLogBtn").onclick = async () => {
+  const listEl = document.getElementById("accessLogList");
+  const msgEl = document.getElementById("accessLogMsg");
+  listEl.innerHTML = '<div class="load-state">Loading…</div>';
+
+  const { data, error } = await sb
+    .from("access_log")
+    .select("ts,event_type,page,path,http_method,ip,country,city,user_agent")
+    .order("ts", { ascending: false })
+    .limit(100);
+
+  if (error) { showMsg(msgEl, error.message, false); listEl.innerHTML = ""; return; }
+
+  if (!data || data.length === 0) {
+    listEl.innerHTML = '<div class="msg err">No activity logged yet.</div>';
+    return;
+  }
+
+  listEl.innerHTML = data.map(r => {
+    const when = new Date(r.ts).toLocaleString();
+    const where = [r.city, r.country].filter(Boolean).join(", ") || "–";
+    const what = r.event_type === "page_view"
+      ? `Viewed ${r.page || "?"}`
+      : `${r.http_method || ""} ${r.path || ""}`.trim();
+    return `<div class="match-pick" style="cursor:default;">
+      <div class="d">${when}</div>
+      <div>${what}</div>
+      <div style="font-size:11px; color:var(--ink-soft); margin-top:2px;">
+        ${r.ip || "–"} · ${where}
+      </div>
+      <div style="font-size:10px; color:var(--ink-soft); margin-top:2px; word-break:break-all;">
+        ${r.user_agent || ""}
+      </div>
+    </div>`;
+  }).join("");
 };
 
 checkSession();
