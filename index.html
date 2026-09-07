@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://footballdata-proxy.tiago-soares20.workers.dev; img-src 'self'; object-src 'none'; base-uri 'self';">
 <title>Football Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -113,7 +114,6 @@
     background: var(--line);
   }
 
-  /* ---- Stat view toggle (segmented control) ---- */
   .view-toggle {
     display: flex;
     background: var(--line);
@@ -141,7 +141,6 @@
     color: var(--ink);
   }
 
-  /* ---- Team table ---- */
   .team-table {
     background: var(--card);
     border-radius: 12px;
@@ -171,7 +170,6 @@
   .gd-pos { color: #1D9E75; }
   .gd-neg { color: #D85A30; }
 
-  /* ---- Match scoreboard rows ---- */
   .match-card {
     background: var(--card);
     border: 1px solid var(--line);
@@ -245,7 +243,6 @@
   }
   .load-state { text-align: center; color: var(--ink-soft); font-size: 13px; padding: 20px; }
 
-  /* ---- Team detail modal ---- */
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(27,26,26,0.55);
     display: flex; align-items: center; justify-content: center;
@@ -289,7 +286,7 @@
 
 <header class="hero">
   <h1 class="title">Football Tracker</h1>
-  <div class="subtitle">Multiple leagues, one scoreboard</div>
+  <div class="subtitle">Seven leagues, one scoreboard</div>
   <div class="stat-strip">
     <div class="stat-block"><div class="num scoreface" id="statMatches">–</div><div class="label">Matches</div></div>
     <div class="stat-block"><div class="num scoreface" id="statGoals">–</div><div class="label">Goals</div></div>
@@ -358,7 +355,7 @@ async function sb(path) {
 }
 
 let currentLeagueId = null;
-let currentStatView = "goals"; // 'goals' | 'corners' | 'cards'
+let currentStatView = "goals";
 let leagues = [];
 let currentTeams = [];
 
@@ -480,7 +477,6 @@ function renderTeamTable(teams) {
     rowFn = t => [fmt(t.played), fmt(t.yellow_cards), fmt(t.red_cards), fmt(t.avg_cards_per_match)];
   }
 
-  // rank column (24px) + team name (flexible) + N stat columns, evenly split
   const gridTemplate = `24px 1fr repeat(${headCols.length}, minmax(0, 1fr))`;
 
   let html = `<div class="team-row head" style="grid-template-columns:${gridTemplate}">
@@ -498,7 +494,6 @@ function renderTeamTable(teams) {
   teamTable.innerHTML = html;
 }
 
-// ---------- TEAM DETAIL MODAL ----------
 document.getElementById("teamTable").addEventListener("click", (e) => {
   const el = e.target.closest(".team-name[data-team-id]");
   if (!el) return;
@@ -588,7 +583,6 @@ function renderSingleTeamView() {
 }
 
 function computeSideStats(matches, teamId, side) {
-  // side: 'home' -> only this team's home matches, 'away' -> only away matches
   const relevant = side === "home"
     ? matches.filter(m => m.home_team_id === teamId)
     : matches.filter(m => m.away_team_id === teamId);
