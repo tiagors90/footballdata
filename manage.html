@@ -195,7 +195,7 @@
     <div class="section-title">Access log</div>
     <div class="card">
       <button class="secondary" id="loadAccessLogBtn" style="margin-top:0;">Load recent activity</button>
-      <label style="display:flex; align-items:center; gap:6px; margin-top:10px; font-size:12.5px; color:var(--ink-soft);">
+      <label style="display:flex; align-items:center; gap:6px; margin-top:10px; font-size:12.5px; color:var(--ink-soft); text-transform:none; letter-spacing:0;">
         <input type="checkbox" id="showDbCallsToggle" style="width:auto;">
         Also show database calls (usually just page traffic noise)
       </label>
@@ -214,12 +214,22 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 navigator.sendBeacon(SUPABASE_URL + "/log/pageview?page=manage");
 
 let leagues = [];
-let teamsByLeague = {}; // league_id -> [{id,name}]
+let teamsByLeague = {};
 let editingMatchId = null;
 
 function showMsg(el, text, ok) {
   el.innerHTML = `<div class="msg ${ok ? 'ok' : 'err'}">${text}</div>`;
   setTimeout(() => { el.innerHTML = ""; }, 4000);
+}
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function showOnly(viewId) {
@@ -229,7 +239,6 @@ function showOnly(viewId) {
   document.getElementById("logoutBtn").classList.toggle("hidden", viewId !== "appView");
 }
 
-// ---------- AUTH ----------
 async function checkSession() {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
@@ -240,7 +249,6 @@ async function checkSession() {
   }
 }
 
-// Supabase fires this specific event when the page loads via a password-recovery link
 sb.auth.onAuthStateChange((event) => {
   if (event === "PASSWORD_RECOVERY") {
     showOnly("resetView");
@@ -261,7 +269,6 @@ document.getElementById("logoutBtn").onclick = async () => {
   await checkSession();
 };
 
-// ---------- FORGOT PASSWORD ----------
 document.getElementById("showForgotBtn").onclick = () => showOnly("forgotView");
 document.getElementById("backToLoginBtn").onclick = () => showOnly("loginView");
 
@@ -273,7 +280,7 @@ document.getElementById("forgotSendBtn").onclick = async () => {
 
   btn.disabled = true;
   const { error } = await sb.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.href.split("#")[0]  // back to this same page
+    redirectTo: window.location.href.split("#")[0]
   });
   btn.disabled = false;
 
@@ -281,7 +288,6 @@ document.getElementById("forgotSendBtn").onclick = async () => {
   showMsg(msgEl, "Check your email for a reset link.", true);
 };
 
-// ---------- SET NEW PASSWORD (after clicking emailed link) ----------
 document.getElementById("resetSaveBtn").onclick = async () => {
   const btn = document.getElementById("resetSaveBtn");
   const msgEl = document.getElementById("resetMsg");
@@ -300,7 +306,6 @@ document.getElementById("resetSaveBtn").onclick = async () => {
   setTimeout(() => checkSession(), 1500);
 };
 
-// ---------- LOAD LEAGUES / TEAMS ----------
 async function loadLeaguesAndTeams() {
   const { data: lgs } = await sb.from("leagues").select("id,name").order("id");
   leagues = lgs || [];
@@ -331,7 +336,6 @@ function populateTeamDropdowns(leagueId) {
   document.getElementById("addAwayTeam").innerHTML = opts;
 }
 
-// ---------- ADD NEW MATCH ----------
 document.getElementById("addSaveBtn").onclick = async () => {
   const btn = document.getElementById("addSaveBtn");
   btn.disabled = true;
@@ -365,7 +369,6 @@ document.getElementById("addSaveBtn").onclick = async () => {
   loadMatchList(document.getElementById("editLeague").value);
 };
 
-// ---------- EDIT EXISTING MATCH ----------
 async function loadMatchList(leagueId) {
   if (!leagueId) return;
   const { data, error } = await sb
@@ -376,13 +379,13 @@ async function loadMatchList(leagueId) {
     .limit(20);
 
   const wrap = document.getElementById("matchList");
-  if (error) { wrap.innerHTML = `<div class="msg err">${error.message}</div>`; return; }
+  if (error) { wrap.innerHTML = `<div class="msg err">${escapeHtml(error.message)}</div>`; return; }
   if (!data || data.length === 0) { wrap.innerHTML = `<div class="msg err">No matches yet.</div>`; return; }
 
   wrap.innerHTML = data.map(m => `
     <div class="match-pick" data-id="${m.id}">
-      <div class="d">${m.match_date}</div>
-      ${m.home_team.name} ${m.home_goals}–${m.away_goals} ${m.away_team.name}
+      <div class="d">${escapeHtml(m.match_date)}</div>
+      ${escapeHtml(m.home_team.name)} ${m.home_goals}\u2013${m.away_goals} ${escapeHtml(m.away_team.name)}
     </div>
   `).join("");
 
@@ -453,8 +456,6 @@ document.getElementById("editSaveBtn").onclick = async () => {
   loadMatchList(document.getElementById("editLeague").value);
 };
 
-// ---------- ACCESS LOG ----------
-
 function parseUserAgent(ua) {
   if (!ua) return "Unknown device";
 
@@ -493,20 +494,20 @@ function renderAccessLog() {
     const when = new Date(r.ts).toLocaleString(undefined, {
       month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
     });
-    const where = [r.city, r.country].filter(Boolean).join(", ") || "Unknown location";
+    const where = escapeHtml([r.city, r.country].filter(Boolean).join(", ") || "Unknown location");
     const isPageView = r.event_type === "page_view";
 
     const what = isPageView
-      ? `Viewed <code>${r.page || "?"}</code>`
-      : `<code>${r.http_method || ""}</code> ${r.path || ""}`;
+      ? `Viewed <code>${escapeHtml(r.page || "?")}</code>`
+      : `<code>${escapeHtml(r.http_method || "")}</code> ${escapeHtml(r.path || "")}`;
 
     return `<div class="log-entry">
       <div class="log-top">
-        <span class="log-when">${when}</span>
+        <span class="log-when">${escapeHtml(when)}</span>
         <span class="log-badge ${isPageView ? "pageview" : "dbcall"}">${isPageView ? "Page view" : "DB call"}</span>
       </div>
       <div class="log-what">${what}</div>
-      <div class="log-meta">${r.ip || "Unknown IP"} · ${where} · ${parseUserAgent(r.user_agent)}</div>
+      <div class="log-meta">${escapeHtml(r.ip || "Unknown IP")} \u00b7 ${where} \u00b7 ${escapeHtml(parseUserAgent(r.user_agent))}</div>
     </div>`;
   }).join("");
 }
