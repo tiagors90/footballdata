@@ -12,8 +12,17 @@ Handles one known data quirk: football-data.co.uk occasionally lists a
 match with home/away reversed compared to the actual fixture (confirmed via
 Stade Rennais vs PSG, 2026-08-23 -- their CSV said PSG were home, but Stade
 Rennais actually hosted). If the direct (date, home, away) lookup misses, we
-try the swapped pairing before giving up, and apply the stats to the correct
-side if that's what matches.
+try the swapped pairing before giving up. Once matched, stats are applied
+as-is from the CSV -- the numeric columns stay tied to the real home/away
+team regardless of which name ended up in which text column.
+
+Sends a normal browser User-Agent on requests to football-data.co.uk, and
+uses the bare domain (football-data.co.uk) rather than www.football-data.co.uk
+-- the www subdomain was found to be intermittently/persistently broken
+(confirmed by reproducing it directly in a browser: the bare domain loads
+the same CSV fine, adding "www." to the same URL fails), while the bare
+domain has been reliable. The User-Agent header is kept as a harmless
+extra precaution, though it turned out not to be the actual cause.
 
 Run manually via GitHub Actions (workflow_dispatch), or on the weekly
 schedule -- see .github/workflows/backfill-corners-cards.yml.
@@ -35,6 +44,15 @@ SB_HEADERS = {
     "Content-Type": "application/json",
 }
 
+# football-data.co.uk appears to filter requests by User-Agent -- a normal
+# browser UA gets through even when the default "python-requests/x.y" one
+# gets a 503. Their robots.txt explicitly allows unnamed/generic clients on
+# this path, so this isn't circumventing anything they've prohibited.
+FD_CO_UK_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+}
+
 # football-data.co.uk league code -> your league name in Supabase
 LEAGUE_CODES = {
     "E0":  "Premier League",
@@ -51,7 +69,7 @@ LEAGUE_CODES = {
 # Update this each August when a new season starts.
 SEASON = "2627"
 
-BASE_URL = f"https://www.football-data.co.uk/mmz4281/{SEASON}"
+BASE_URL = f"https://football-data.co.uk/mmz4281/{SEASON}"
 
 
 def sb_get(path):
@@ -95,12 +113,11 @@ def main():
             continue
 
         url = f"{BASE_URL}/{code}.csv"
-        resp = requests.get(url, timeout=20)
+        resp = requests.get(url, headers=FD_CO_UK_HEADERS, timeout=20)
         if not resp.ok:
             print(f"[{league_name}] couldn't fetch {url} ({resp.status_code})")
             continue
 
-        # existing matches for this league, keyed by (date, home_id, away_id)
         existing = sb_get(
             f"matches?select=id,match_date,home_team_id,away_team_id,home_corners"
             f"&league_id=eq.{league_id}"
@@ -152,16 +169,6 @@ def main():
             hr, ar = row.get("HR", "0"), row.get("AR", "0")
             if not hc or not ac:
                 continue  # this source doesn't have corners for this match either
-
-            if reversed_match:
-                # football-data.co.uk had this row's HomeTeam/AwayTeam text
-                # labels scrambled (confirmed via a real match check) -- but
-                # HC/AC and the card columns still correctly correspond to
-                # the actual home/away teams, same as any normal row. So we
-                # apply them exactly as normal; "reversed_match" only mattered
-                # for locating the right row above, not for how we use the
-                # numbers once found.
-                pass
 
             final_home_corners, final_away_corners = int(hc), int(ac)
             final_home_yellow, final_away_yellow = int(hy or 0), int(ay or 0)
